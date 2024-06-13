@@ -170,8 +170,10 @@ the Basics for Firewalls.
 before: nmap -v 10.m.100.8
 @Cucm:
 config t
-int fa 0/0
- ip add 10.m.100.9 255.255.255.0 Secondary
+int gi 3
+no shut
+ ip add 192.168.103.8 255.255.255.0
+ ip add 192.168.103.9 255.255.255.0 Secondary
 service finger
 service tcp-small-servers
 service udp-small-servers
@@ -179,15 +181,17 @@ ip dns server
 ip http server
 ip http secure-server
 !Make Ping EASY
-ip host pc 10.m.1.10
-ip host cm 10.m.100.8
-ip host cm2 10.m.100.9
-ip host p1 10.m.100.101
-ip host p2 10.m.100.102
-ip host c6 10.m.50.6
-ip host c8 10.m.50.8
-ip host sw 10.m.1.4
-ip host ed 10.m.m.1
+ip host www.web8.com 192.168.103.8
+ip host www.web9.com 192.168.103.9
+ip host pc 10.31.1.10
+ip host cm 10.31.100.8
+ip host cm2 10.31.100.9
+ip host p1 10.31.100.101
+ip host p2 10.31.100.102
+ip host c6 10.31.50.6
+ip host c8 10.31.50.8
+ip host sw 10.31.1.4
+ip host ed 10.31.31.1
 
 TASK7: Enter the World of BlueTeam: Protect vs Redteam: Attack, 
 BlueTeam: UTM: unified Threat management:
@@ -201,11 +205,127 @@ Top 5 UTM: 1.FortinetFortigate:
            2. Checkpoint
            3.4 Cisco
 
+CYBERSECURITY TASK7: PROTECTING YOUR CORPORATE WEB APPS.
+EX.1 CREATE A FIREWALL POLICY NAMED PROWEBAPP1 TO OPEN
+WWW.WEB8.COM HAS HTTP AND HTTPS AS OPEN
+WWW.WEB9.COM HAS SSH AND DNS OPEN
+FORMULA:  PROTOCOL  HACKER  VICTIM  PORT
+
+config terminal
+no ip access-list extended PROWEBAPP1
+ip access-list extended PROWEBAPP1
+permit tcp any host www.web8.com eq 80 log
+permit tcp any host www.web8.com eq 443 log
+permit tcp any host www.web9.com eq 22 log
+permit tcp any host www.web9.com eq 53 log
+interface gi 3
+ip access-group PROWEBAPP1 in
+do sh ip access-list PROWEBAPP1
 
 
+EX.2 CREATE A FIREWALL POLICY NAMED PROWEBAPP2 TO OPEN
+WWW.WEB8.COM HAS HTTPS AS OPEN
+WWW.WEB9.COM HTTPS AS OPEN
+FORMULA:  PROTOCOL  HACKER  VICTIM  PORT
+config terminal
+no ip access-list extended PROWEBAPP2
+ip access-list extended PROWEBAPP2
+permit tcp any host www.web8.com eq 443 log
+permit tcp any host www.web9.com eq 443 log
+interface gi 3
+ip access-group PROWEBAPP2 in
+do sh ip access-list PROWEBAPP2
+
+EX.3 CREATE A FIREWALL POLICY NAMED PROWEBAPP3 TO OPEN
+FORMULA:  PROTOCOL  HACKER  VICTIM  PORT
+WWW.WEB8.COM HAS DNS,SSH,HTTP,TELNET AS OPEN
+WWW.WEB9.COM HAS TELNET, HTTPS, SSH AS OPEN
+config terminal
+no ip access-list extended PROWEBAPP3
+ip access-list extended PROWEBAPP3
+permit tcp any host www.web8.com eq 53 log
+permit tcp any host www.web8.com eq 22 log
+permit tcp any host www.web8.com eq 80 log
+permit tcp any host www.web8.com eq 23 log
+permit tcp any host www.web9.com eq 23 log
+permit tcp any host www.web9.com eq 443 log
+permit tcp any host www.web9.com eq 22 log
+interface gi 3
+ip access-group PROWEBAPP3 in
+do sh ip access-list PROWEBAPP3
+
+EX.4 CREATE A FIREWALL POLICY NAMED PROWEBAPP4 TO OPEN
+FORMULA:  PROTOCOL  HACKER  VICTIM  PORT
+WWW.WEB8.COM HAS PING, DNS, HTTPS AS OPEN
+WWW.WEB9.COM HAS EVERYTHING OPEN AS OPEN
+config terminal
+no ip access-list extended PROWEBAPP4
+ip access-list extended PROWEBAPP4
+permit icmp any host www.web8.com 
+permit tcp any host www.web8.com eq 53
+permit tcp any host www.web8.com eq 443
+permit IP any host www.web9.com
+interface gi 3
+ip access-group PROWEBAPP4 in
+do sh ip access-list PROWEBAPP4
+
+EX.5 LAST FIREWALL POLICY NAMED LASTFWP TO OPEN
+FORMULA:  PROTOCOL  HACKER  VICTIM  PORT
+WWW.WEB8.COM HAS PING, CHARGEN, FINGER, HTTP AS OPEN
+WWW.WEB9.COM HAS SSH, TELNET, DAYTIME, DNS HTTPS AS OPEN
+config terminal
+no ip access-list extended LASTFWP
+ip access-list extended LASTFWP
+permit tcp any host www.web8.com eq 19
+permit tcp any host www.web8.com eq 79
+permit tcp any host www.web8.com eq 80
+permit tcp any host www.web9.com eq 22
+permit tcp any host www.web9.com eq 23
+permit tcp any host www.web9.com eq 9
+permit tcp any host www.web9.com eq 53
+permit tcp any host www.web9.com eq 443
+interface gi 3
+no ip access-group LASTFWP in
+do sh ip access-list LASTFWP
 
 
+TASK8: CONFIGURING CISCO NETWORK SERVICES:
+NETWORK TIME PROTOCOL OR NTP
+is a layer 7 protocol using UDP 123
+configure your VPNPH to use time.google.com servers in USA:
 
+configure terminal
+ntp server 216.239.35.8
+end
+show ntp associations
+
+
+TASK9: NAT: Network Address Translation Service:
+Nat, Proxy, Hotspot, Tethering, = PENGE INTERNET
+give internet to your entire building using cisco.
+STEP1: define inside and outside:
+STEP2: create access list to permit IP of inside:
+STEP3: create a NAT pool with overload
+@VPNPH
+configure terminal
+int gi 1
+ip nat OUTSIDE
+int gi 2
+ip nat INSIDE
+int gi 3
+ip nat INSIDE
+no access-list 7
+access-list 7 permit 192.168.102.0 0.0.0.255
+access-list 7 permit 192.168.103.0 0.0.0.255
+ip nat inside source list 7 interface gi 1 overload
+ip nat inside source static 192.168.102.69 192.168.108.69
+ip nat inside source static 192.168.103.88 192.168.108.88
+end
+
+TASK10: do you want to be replaced by A.I at work? replaced by 
+YOUNGER, SMARTER, CHEAPER, NEW HIRES?? HOW TO BE UNTOUCHABLE EMPLOYEE?
+IF YOU WANT HAYUP/SIX DIGITS SWELDO/UNTOUCHABLE STATUS.
+YOU NEED HAYUP/SIX DIGITS SWELDO HABITS.
 
 
 
